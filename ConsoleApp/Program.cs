@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Collections.Immutable;
+using System.Text;
 
 var P0000 = new State("P0000", 0, false, 0, false);
 var P0100 = new State("P0100", 0, true, 0, false);
@@ -18,6 +19,7 @@ var count = 1_000_000;
 var state = P0000;
 
 var generatedCount = 0;
+var declinedCount0 = 0;
 
 var queueLength1 = 0;
 
@@ -33,7 +35,6 @@ var queueLength2 = 0;
 var channelLength2 = 0;
 var processedCount2 = 0;
 var processedOnQueue2 = 0;
-var declinedCount2 = 0;
 
 var l2 = 0;
 
@@ -51,10 +52,10 @@ var a = (processedCount1 + processedCount2) / (double)count;
 var lq1 = queueLength1 / (double)count;
 var lq2 = queueLength2 / (double)count;
 var lc1 = requestLength/ (double)count;
-var wq1 = processedOnQueue1 == 0 ? 0 : ((double)queueLength1 / processedOnQueue1);
-var wq2 = processedOnQueue2 == 0 ? 0 : ((double)queueLength2 / processedOnQueue2);
+var wq1 = (double)queueLength1 / processedOnQueue1;
+var wq2 = (double)queueLength2 / processedOnQueue2;
 var wq = wq1 + wq2;
-var wc = (double)channelLength1 / processedCount1 + (double)channelLength2 / processedCount2 + wq1 + wq2;
+var wc = (double)channelLength1 / processedCount1 + (double)channelLength2 / processedCount2 + wq;
 var q = (double)processedCount2 / generatedCount;
 var p = 1 - q;
 var k1 = (double)channelLength1 / count;
@@ -63,18 +64,18 @@ var k2 = (double)channelLength2 / count;
 var message = 
 $@"States: {StatePairsToString(pairs)}
 Sum: {sum}
-A: {a}
+A:   {a}
 Lq1: {lq1}
 Lq2: {lq2}
-Lc: {lc1}
+Lc:  {lc1}
 Wq1: {wq1}
 Wq2: {wq2}
-Wq: {wq}
-Wc: {wc}
-Q: {q}
-P: {p}
-K1: {k1}
-K2: {k2}";
+Wq:  {wq}
+Wc:  {wc}
+Q:   {q}
+P:   {p}
+K1:  {k1}
+K2:  {k2}";
 Console.WriteLine(message);
 
 void Run()
@@ -99,6 +100,7 @@ void Action(bool p, bool pi1, bool pi2)
         else
         {
             state = P0100;
+            generatedCount++;
         }
     }
     else if (state == P0100)
@@ -110,14 +112,18 @@ void Action(bool p, bool pi1, bool pi2)
         else if (p && !pi1)
         {
             state = P0001;
+            processedCount1++;
         }
         else if (!p && pi1)
         {
             state = P1100;
+            generatedCount++;
         }
         else if (!p && !pi1)
         {
             state = P0101;
+            processedCount1++;
+            generatedCount++;
         }
     }
     else if (state == P0001)
@@ -125,6 +131,7 @@ void Action(bool p, bool pi1, bool pi2)
         if (p && !pi2)
         {
             state = P0000;
+            processedCount2++;
         }
         else if (p && pi2)
         {
@@ -133,10 +140,13 @@ void Action(bool p, bool pi1, bool pi2)
         else if (!p && !pi2)
         {
             state = P0100;
+            processedCount2++;
+            generatedCount++;
         }
         else if (!p && pi2)
         {
             state = P0101;
+            generatedCount++;
         }
     }
     else if (state == P1100)
@@ -147,19 +157,22 @@ void Action(bool p, bool pi1, bool pi2)
         }
         else if (!p && pi1)
         {
-            state= P1100;
-        }
-        else if (p && pi1)
-        {
-            state = P0100;
+            state = P1100;
+            generatedCount++;
+            declinedCount0++;
         }
         else if (p && !pi1)
         {
             state = P0101;
+            processedCount1++;
+            processedOnQueue1++;
         }
         else if (!p && !pi1)
         {
             state = P1101;
+            generatedCount++;
+            processedCount1++;
+            processedOnQueue1++;
         }
     }
     else if (state == P0101)
@@ -167,10 +180,15 @@ void Action(bool p, bool pi1, bool pi2)
         if (p && pi1 && !pi2)
         {
             state = P0100;
+            processedCount2++;
         }
         else if (!p && !pi1 && !pi2)
         {
             state = P0101;
+            generatedCount++;
+            processedCount1++;
+            processedCount2++;
+
         }
         else if (p && pi1 && pi2)
         {
@@ -179,22 +197,30 @@ void Action(bool p, bool pi1, bool pi2)
         else if (p && !pi1 && !pi2)
         {
             state = P0001;
+            processedCount1++;
+            processedCount2++;
         }
         else if (p && !pi1 && pi2)
         {
             state = P0011;
+            processedCount1++;
         }
-        else if (p && pi1 && !pi2)
+        else if (!p && !pi1 && pi2)
         {
             state = P0111;
+            generatedCount++;
+            processedCount1++;
         }
-        else if (!p && !pi1 && !pi2)
+        else if (!p && pi1 && pi2)
         {
             state = P1101;
+            generatedCount++;
         }
         else if (!p && pi1 && !pi2)
         {
             state = P1100;
+            generatedCount++;
+            processedCount2++;
         }
     }
     else if (state == P0011)
@@ -202,18 +228,24 @@ void Action(bool p, bool pi1, bool pi2)
         if (p && !pi2)
         {
             state = P0001;
+            processedCount2++;
+            processedOnQueue2++;
         }
-        else if (p && !pi1 && pi2)
+        else if (p && pi2)
         {
             state = P0011;
         }
         else if (!p && !pi2)
         {
             state = P0101;
+            generatedCount++;
+            processedCount2++;
+            processedOnQueue2++;
         }
-        else if (!p && !pi1 && pi2)
+        else if (!p && pi2)
         {
             state = P0111;
+            generatedCount++;
         }
     }
     else if (state == P1101)
@@ -221,26 +253,42 @@ void Action(bool p, bool pi1, bool pi2)
         if (p && pi1 && !pi2)
         {
             state = P1100;
+            processedCount2++;
         }
         else if (!p && pi1 && !pi2)
         {
             state = P1100;
+            generatedCount++;
+            declinedCount0++;
+            processedCount2++;
         }
         else if (p && !pi1 && !pi2)
         {
             state = P0101;
+            processedCount1++;
+            processedOnQueue1++;
+            processedCount2++;
         }
         else if (p && !pi1 && pi2)
         {
             state = P0111;
+            processedCount1++;
+            processedOnQueue1++;
         }
         else if (!p && !pi1 && pi2)
         {
             state = P1111;
+            generatedCount++;
+            processedCount1++;
+            processedOnQueue1++;
         }
         else if (!p && !pi1 && !pi2)
         {
             state = P1101;
+            generatedCount++;
+            processedCount1++;
+            processedOnQueue1++;
+            processedCount2++;
         }
         else if (p && pi1 && pi2)
         {
@@ -249,6 +297,8 @@ void Action(bool p, bool pi1, bool pi2)
         else if (!p && pi1 && pi2)
         {
             state = P1101;
+            generatedCount++;
+            declinedCount0++;
         }
     }
     else if (state == P0111)
@@ -256,22 +306,36 @@ void Action(bool p, bool pi1, bool pi2)
         if (p && pi1 && !pi2)
         {
             state = P0101;
+            processedCount2++;
+            processedOnQueue2++;
         }
         else if (p && !pi1 && !pi2)
         {
             state = P0011;
+            processedCount1++;
+            processedCount2++;
+            processedOnQueue2++;
         }
         else if (p && !pi1 && pi2)
         {
             state = P0011;
+            processedCount1++;
+            declinedCount1++;
         }
         else if (!p && !pi1 && !pi2)
         {
             state = P0111;
+            generatedCount++;
+            processedCount1++;
+            processedCount2++;
+            processedOnQueue2++;
         }
         else if (!p && !pi1 && pi2)
         {
             state = P0111;
+            generatedCount++;
+            processedCount1++;
+            declinedCount1++;
         }
         else if (p && pi1 && pi2)
         {
@@ -280,10 +344,14 @@ void Action(bool p, bool pi1, bool pi2)
         else if (!p && pi1 && !pi2)
         {
             state = P1101;
+            generatedCount++;
+            processedCount2++;
+            processedOnQueue2++;
         }
         else if (!p && pi1 && pi2)
         {
             state = P1111;
+            generatedCount++;
         }
     }
     else if (state == P1111)
@@ -291,26 +359,49 @@ void Action(bool p, bool pi1, bool pi2)
         if (p && pi1 && !pi2)
         {
             state = P1101;
+            processedCount2++;
+            processedOnQueue2++;
         }
         else if (!p && pi1 && !pi2)
         {
             state = P1101;
+            generatedCount++;
+            declinedCount0++;
+            processedCount2++;
+            processedOnQueue2++;
         }
         else if (p && !pi1 && !pi2)
         {
             state = P0111;
+            processedCount1++;
+            processedOnQueue1++;
+            processedCount2++;
+            processedOnQueue2++;
         }
         else if (p && !pi1 && pi2)
         {
             state = P0111;
+            processedCount1++;
+            processedOnQueue1++;
+            declinedCount1++;
+        }
+        else if (!p && !pi1 && !pi2)
+        {
+            state = P1111;
+            generatedCount++;
+            processedCount1++;
+            processedOnQueue1++;
+            processedCount2++;
+            processedOnQueue2++;
+            
         }
         else if (!p && !pi1 && pi2)
         {
-            state = P1111;
-        }
-        else if (!p && !pi1 && pi2)
-        {
-            state = P1111;
+            state = P1111; 
+            generatedCount++;
+            processedCount1++;
+            processedOnQueue1++;
+            declinedCount1++;
         }
         else if (p && pi1 && pi2)
         {
@@ -319,6 +410,8 @@ void Action(bool p, bool pi1, bool pi2)
         else if (!p && pi1 && pi2)
         {
             state = P1111;
+            generatedCount++;
+            declinedCount0++;
         }
     }
     var ql1 = state.QueueLength1;
@@ -363,7 +456,7 @@ string ToString(IEnumerable<(string, string)> pairs)
     sb.Append('[').AppendLine();
     foreach (var pair in pairs)
     {
-        sb.Append('{').Append(pair.Item1).Append(':').Append(' ').Append(pair.Item2).Append('}').AppendLine();
+        sb.Append(' ').Append('{').Append(pair.Item1).Append(':').Append(' ').Append(pair.Item2).Append('}').AppendLine();
     }
     return sb.Append(']').ToString();
 }
