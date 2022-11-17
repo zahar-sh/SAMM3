@@ -4,7 +4,7 @@ var P0000 = new State("P0000", 0, false, 0, false);
 var P0100 = new State("P0100", 0, true, 0, false);
 var P0001 = new State("P0001", 0, false, 0, true);
 var P1100 = new State("P1100", 1, true, 0, false);
-var P0101 = new State("P0101", 0, false, 0, true);
+var P0101 = new State("P0101", 0, true, 0, true);
 var P0011 = new State("P0011", 0, false, 1, true);
 var P1101 = new State("P1101", 1, true, 0, true);
 var P0111 = new State("P0111", 0, true, 1, true);
@@ -69,8 +69,8 @@ var p = 1 - q;
 var lq1 = (double)queueLength1 / count;
 var lq2 = (double)queueLength2 / count;
 var lc1 = (double)requestLength/ count;
-var wq1 = (double)queueLength1 / processedOnQueue1;
-var wq2 = (double)queueLength2 / processedOnQueue2;
+var wq1 = processedOnQueue1 == 0 ? 0: (double)queueLength1 / processedOnQueue1;
+var wq2 = processedOnQueue2 == 0 ? 0 : (double)queueLength2 / processedOnQueue2;
 var wq = wq1 + wq2;
 var wc = (double)channelLength1 / processedCount1 + (double)channelLength2 / processedCount2 + wq;
 var k1 = (double)channelLength1 / count;
@@ -138,8 +138,8 @@ void Action(bool p, bool pi1, bool pi2)
         else if (!p && !pi1)
         {
             state = P0101;
-            processedCount1++;
             generatedCount++;
+            processedCount1++;
         }
     }
     else if (state == P0001)
@@ -204,7 +204,6 @@ void Action(bool p, bool pi1, bool pi2)
             generatedCount++;
             processedCount1++;
             processedCount2++;
-
         }
         else if (p && pi1 && pi2)
         {
